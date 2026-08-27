@@ -1,0 +1,244 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum TipoPersona {
+  MILITAR_PROPIO
+  MILITAR_EXTERNO
+  CIVIL
+}
+
+enum SituacionMilitar {
+  ACTIVO
+  RETIRADO
+  LICENCIA
+}
+
+enum TipoVehiculo {
+  AUTO
+  CAMIONETA
+  MOTO
+  CAMION
+  UTILITARIO
+  OTRO
+}
+
+enum EstadoIngreso {
+  ABIERTO
+  CERRADO
+  ANULADO
+}
+
+enum TipoNivelOrganico {
+  COMANDO_DIRECCION
+  UNIDAD_ORGANISMO
+  SEDE_EXTERNA
+}
+
+// ============================================
+// AUTENTICACIÓN Y ROLES
+// ============================================
+
+model Rol {
+  id          Int       @id @default(autoincrement())
+  codigo      String    @unique @db.VarChar(30)
+  descripcion String    @db.VarChar(100)
+  usuarios    Usuario[]
+
+  @@map("roles")
+}
+
+model Usuario {
+  id              String             @id @default(uuid()) @db.Uuid
+  username        String             @unique @db.VarChar(50)
+  passwordHash    String             @map("password_hash") @db.VarChar(255)
+  nombreCompleto  String             @map("nombre_completo") @db.VarChar(120)
+  rolId           Int                @map("rol_id")
+  activo          Boolean            @default(true)
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  rol             Rol                @relation(fields: [rolId], references: [id])
+  ingresosCargados RegistroIngreso[] @relation("OperadorIngreso")
+  egresosCargados  RegistroIngreso[] @relation("OperadorEgreso")
+
+  @@index([activo])
+  @@map("usuarios")
+}
+
+// ============================================
+// ESTRUCTURA ORGANIZACIONAL
+// ============================================
+
+model Unidad {
+  id             Int                 @id @default(autoincrement())
+  codigo         String              @unique @db.VarChar(30)
+  nombre         String              @db.VarChar(120)
+  tipoNivel      TipoNivelOrganico   @default(UNIDAD_ORGANISMO) @map("tipo_nivel")
+  unidadPadreId  Int?                @map("unidad_padre_id")
+  esUnidadPropia Boolean             @default(false) @map("es_unidad_propia")
+  activo         Boolean             @default(true)
+  createdAt      DateTime            @default(now()) @map("created_at")
+
+  // Relaciones
+  unidadPadre    Unidad?             @relation("JerarquiaUnidades", fields: [unidadPadreId], references: [id], onDelete: SetNull)
+  subunidades    Unidad[]            @relation("JerarquiaUnidades")
+  sectores       SectorDepartamento[]
+  militares      PersonalMilitar[]
+  ingresosDestino RegistroIngreso[]
+
+  @@index([codigo])
+  @@index([activo])
+  @@map("unidades")
+}
+
+model SectorDepartamento {
+  id        Int               @id @default(autoincrement())
+  unidadId  Int               @map("unidad_id")
+  codigo    String            @db.VarChar(30)
+  nombre    String            @db.VarChar(120)
+  activo    Boolean           @default(true)
+  createdAt DateTime          @default(now()) @map("created_at")
+
+  unidad    Unidad            @relation(fields: [unidadId], references: [id], onDelete: Cascade)
+  ingresos  RegistroIngreso[]
+
+  @@unique([unidadId, codigo])
+  @@index([unidadId])
+  @@map("sectores_departamentos")
+}
+
+// ============================================
+// PERSONAS Y CATEGORÍAS
+// ============================================
+
+model Persona {
+  id            String           @id @default(uuid()) @db.Uuid
+  tipoDocumento String           @default("DNI") @map("tipo_documento") @db.VarChar(10)
+  dni           String           @unique @db.VarChar(15)
+  nombre        String           @db.VarChar(80)
+  apellido      String           @db.VarChar(80)
+  tipoPersona   TipoPersona      @map("tipo_persona")
+  activo        Boolean          @default(true)
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  // Relaciones
+  militar       PersonalMilitar?
+  civil         PersonalCivil?
+  vehiculos     Vehiculo[]
+  ingresos      RegistroIngreso[]
+
+  @@index([dni])
+  @@index([tipoPersona])
+  @@map("personas")
+}
+
+model PersonalMilitar {
+  id              String           @id @db.Uuid
+  grado           String           @db.VarChar(50)
+  situacion       SituacionMilitar @default(ACTIVO)
+  unidadRevistaId Int              @map("unidad_revista_id")
+
+  persona         Persona          @relation(fields: [id], references: [id], onDelete: Cascade)
+  unidadRevista   Unidad           @relation(fields: [unidadRevistaId], references: [id])
+
+  @@index([unidadRevistaId])
+  @@map("personal_militar")
+}
+
+model PersonalCivil {
+  id        String   @id @db.Uuid
+  domicilio String?  @db.VarChar(150)
+  localidad String?  @db.VarChar(100)
+  provincia String?  @db.VarChar(100)
+  telefono  String?  @db.VarChar(30)
+
+  persona   Persona  @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  @@map("personal_civil")
+}
+
+// ============================================
+// VEHÍCULOS
+// ============================================
+
+model Vehiculo {
+  id               String            @id @default(uuid()) @db.Uuid
+  dominio          String            @unique @db.VarChar(15)
+  tipo             TipoVehiculo      @default(AUTO)
+  marca            String            @db.VarChar(60)
+  modelo           String?           @db.VarChar(60)
+  color            String            @db.VarChar(40)
+  titularPersonaId String?           @map("titular_persona_id") @db.Uuid
+  activo           Boolean           @default(true)
+  createdAt        DateTime          @default(now()) @map("created_at")
+
+  titular          Persona?          @relation(fields: [titularPersonaId], references: [id], onDelete: SetNull)
+  ingresos         RegistroIngreso[]
+
+  @@index([dominio])
+  @@index([titularPersonaId])
+  @@map("vehiculos")
+}
+
+// ============================================
+// REGISTROS DE INGRESO/EGRESO
+// ============================================
+
+model RegistroIngreso {
+  id                String              @id @default(uuid()) @db.Uuid
+  fichaNro          Int?                @map("ficha_nro") // Null para personal propio
+  personaId         String              @map("persona_id") @db.Uuid
+  vehiculoId        String?             @map("vehiculo_id") @db.Uuid
+  unidadDestinoId   Int                 @map("unidad_destino_id")
+  sectorId          Int?                @map("sector_id")
+  fechaIngreso      DateTime            @default(now()) @map("fecha_ingreso")
+  fechaEgreso       DateTime?           @map("fecha_egreso")
+  horaIngreso       String?             @map("hora_ingreso") @db.VarChar(10) // HH:MM
+  horaEgreso        String?             @map("hora_egreso") @db.VarChar(10) // HH:MM
+  estado            EstadoIngreso       @default(ABIERTO)
+  operadorIngresoId String              @map("operador_ingreso_id") @db.Uuid
+  operadorEgresoId  String?             @map("operador_egreso_id") @db.Uuid
+  observaciones     String?             @db.Text
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+
+  // Relaciones
+  persona           Persona             @relation(fields: [personaId], references: [id])
+  vehiculo          Vehiculo?           @relation(fields: [vehiculoId], references: [id], onDelete: SetNull)
+  unidadDestino     Unidad              @relation(fields: [unidadDestinoId], references: [id])
+  sector            SectorDepartamento? @relation(fields: [sectorId], references: [id], onDelete: SetNull)
+  operadorIngreso   Usuario             @relation("OperadorIngreso", fields: [operadorIngresoId], references: [id])
+  operadorEgreso    Usuario?            @relation("OperadorEgreso", fields: [operadorEgresoId], references: [id])
+  detalleVisita     DetalleVisita?
+
+  @@index([fechaIngreso])
+  @@index([estado])
+  @@index([personaId])
+  @@index([vehiculoId])
+  @@index([unidadDestinoId])
+  @@map("registros_ingresos")
+}
+
+model DetalleVisita {
+  id              String          @id @default(uuid()) @db.Uuid
+  ingresoId       String          @unique @map("ingreso_id") @db.Uuid
+  procedencia     String          @db.VarChar(150)
+  personaVisitada String          @map("persona_visitada") @db.VarChar(120)
+  motivoVisita    String          @map("motivo_visita") @db.Text
+  createdAt       DateTime        @default(now()) @map("created_at")
+
+  ingreso         RegistroIngreso @relation(fields: [ingresoId], references: [id], onDelete: Cascade)
+
+  @@map("detalles_visitas")
+}
