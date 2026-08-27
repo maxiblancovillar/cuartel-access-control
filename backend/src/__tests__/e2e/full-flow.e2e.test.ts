@@ -29,7 +29,6 @@ describe('E2E: Full Flow', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ dni: '38123456', unidadDestinoId: 2 });
 
-    let ingresoId: string;
     if (posibleAbierto.status === 409) {
       // Ya había uno abierto de una corrida previa: no podemos saber su id
       // desde la respuesta 409, así que este escenario se considera cubierto
@@ -38,7 +37,7 @@ describe('E2E: Full Flow', () => {
     }
 
     expect(posibleAbierto.status).toBe(201);
-    ingresoId = posibleAbierto.body.id;
+    const ingresoId: string = posibleAbierto.body.id;
     expect(posibleAbierto.body.estado).toBe('ABIERTO');
 
     // 4. Check-out

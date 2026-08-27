@@ -15,6 +15,8 @@ export interface AuthContextType {
   usuario: LoginResponse['usuario'] | null;
   accessToken: string | null;
   isLoading: boolean;
+  /** true mientras se rehidrata la sesión desde localStorage al montar la app. */
+  isInitializing: boolean;
   login: (username: string, password: string) => Promise<LoginResponse['usuario']>;
   logout: () => void;
 }

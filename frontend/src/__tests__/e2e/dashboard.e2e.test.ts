@@ -34,11 +34,28 @@ test.describe('Dashboard', () => {
     await page.waitForURL('**/login');
   });
 
-  test('SUPERVISOR debería poder navegar a Reportes desde el sidebar', async ({ page }) => {
+  test('SUPERVISOR debería poder navegar a Reportes y ver filtros, gráficos y tabla', async ({
+    page,
+  }) => {
     await page.getByRole('link', { name: '📄 Reportes' }).click();
     await page.waitForURL('**/reports');
     await expect(page.getByRole('heading', { name: '📄 Reportes' })).toBeVisible();
-    await expect(page.getByText(/En construcción/)).toBeVisible();
+    await expect(page.getByText('Filtros')).toBeVisible();
+    await expect(page.getByText('Registros por Tipo')).toBeVisible();
+    await expect(page.getByText('Ingresos por Hora del Día')).toBeVisible();
+    await expect(page.getByRole('button', { name: /Descargar CSV/ })).toBeVisible();
+  });
+
+  test('SUPERVISOR debería poder filtrar reportes por tipo de persona', async ({ page }) => {
+    await page.goto('/reports');
+    await page.waitForSelector('text=Filtros');
+
+    // Los filtros de fecha son <input type="date">, no <select>. El primer
+    // <select> del formulario de filtros es "Tipo Persona".
+    await page.locator('select').first().selectOption('CIVIL');
+
+    // Esperar a que la tabla se re-renderice con el filtro aplicado
+    await expect(page.getByText(/Registros \(Total:/)).toBeVisible();
   });
 
   test('SUPERVISOR no debería ver el link de Administración en el sidebar', async ({ page }) => {
@@ -61,16 +78,61 @@ test.describe('Admin', () => {
     await page.waitForURL('**/dashboard');
   });
 
-  test('ADMIN debería poder navegar a Administración desde el sidebar', async ({ page }) => {
+  test('ADMIN debería poder navegar a Administración y ver la tabla de usuarios', async ({
+    page,
+  }) => {
     await page.getByRole('link', { name: '⚙️ Administración' }).click();
     await page.waitForURL('**/admin');
     await expect(page.getByRole('heading', { name: '⚙️ Administración' })).toBeVisible();
-    await expect(page.getByText(/En construcción/)).toBeVisible();
+    await expect(page.getByRole('button', { name: '👥 Usuarios' })).toBeVisible();
+    await expect(page.getByText(/Usuarios \(\d+\)/)).toBeVisible();
+    await expect(page.getByText('admin', { exact: true })).toBeVisible();
   });
 
   test('ADMIN debería poder navegar a Reportes desde el sidebar', async ({ page }) => {
     await page.getByRole('link', { name: '📄 Reportes' }).click();
     await page.waitForURL('**/reports');
     await expect(page.getByRole('heading', { name: '📄 Reportes' })).toBeVisible();
+  });
+
+  test('ADMIN debería poder ver las tabs de Unidades y Auditoría', async ({ page }) => {
+    await page.goto('/admin');
+
+    await page.getByRole('button', { name: '🏢 Unidades' }).click();
+    await expect(page.getByText(/Unidades Organizacionales/)).toBeVisible();
+
+    await page.getByRole('button', { name: '📋 Auditoría' }).click();
+    await expect(page.getByText(/Log de Auditoría/)).toBeVisible();
+    // El propio login de este test ya generó al menos un evento LOGIN
+    await expect(page.getByText('LOGIN').first()).toBeVisible();
+  });
+
+  test('ADMIN debería poder crear, editar y desactivar un usuario (CRUD real)', async ({
+    page,
+  }) => {
+    const username = `e2e_test_${Date.now()}`;
+    await page.goto('/admin');
+
+    // Crear
+    await page.getByRole('button', { name: '➕ Nuevo Usuario' }).click();
+    await page.getByLabel('Usuario').fill(username);
+    await page.getByLabel('Nombre Completo').fill('Usuario E2E Playwright');
+    await page.getByLabel('Contraseña').fill('Password123!');
+    await page.getByRole('button', { name: '➕ Crear' }).click();
+
+    const fila = page.locator('tr', { hasText: username });
+    await expect(fila).toBeVisible();
+    await expect(fila.getByText('Activo')).toBeVisible();
+
+    // Editar
+    await fila.getByRole('button', { name: '✏️ Editar' }).click();
+    await page.getByLabel('Nombre Completo').fill('Usuario E2E Editado');
+    await page.getByRole('button', { name: '💾 Actualizar' }).click();
+    await expect(page.locator('tr', { hasText: username })).toContainText('Usuario E2E Editado');
+
+    // Desactivar
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.locator('tr', { hasText: username }).getByRole('button', { name: '🚫 Desactivar' }).click();
+    await expect(page.locator('tr', { hasText: username })).toContainText('Inactivo');
   });
 });

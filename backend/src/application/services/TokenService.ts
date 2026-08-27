@@ -7,8 +7,8 @@ export class TokenService implements ITokenService {
   private readonly jwtExpiresIn = process.env.JWT_EXPIRES_IN || '1h';
   private readonly refreshTokenExpiresIn = process.env.REFRESH_TOKEN_EXPIRES_IN || '7d';
 
-  generateAccessToken(usuarioId: string, rol: string): string {
-    return jwt.sign({ usuarioId, rol }, this.jwtSecret, {
+  generateAccessToken(usuarioId: string, rol: string, username: string): string {
+    return jwt.sign({ usuarioId, rol, username }, this.jwtSecret, {
       expiresIn: this.jwtExpiresIn,
     } as jwt.SignOptions);
   }

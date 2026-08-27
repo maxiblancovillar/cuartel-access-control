@@ -1,26 +1,44 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ProtectedLayout } from '@/components/layout/ProtectedLayout';
-import { Card } from '@/components/ui/Card';
-import { Alert } from '@/components/ui/Alert';
+import { UsersTab } from '../components/UsersTab';
+import { UnitsTab } from '../components/UnitsTab';
+import { AuditTab } from '../components/AuditTab';
+
+type TabType = 'usuarios' | 'unidades' | 'auditoria';
 
 export const AdminPage: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<TabType>('usuarios');
+
+  const tabs: Array<{ id: TabType; label: string }> = [
+    { id: 'usuarios', label: '👥 Usuarios' },
+    { id: 'unidades', label: '🏢 Unidades' },
+    { id: 'auditoria', label: '📋 Auditoría' },
+  ];
+
   return (
     <ProtectedLayout>
       <div className="space-y-6">
         <h1 className="text-3xl font-bold text-gray-900">⚙️ Administración</h1>
 
-        <Alert variant="info" title="🚧 En construcción">
-          El panel de administración todavía no está implementado. Vas a poder gestionar
-          usuarios, unidades y auditoría desde acá próximamente.
-        </Alert>
+        <div className="flex gap-2 border-b">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-6 py-3 font-semibold transition-colors ${
+                activeTab === tab.id
+                  ? 'border-b-2 border-blue-600 text-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-        <Card title="Próximamente">
-          <ul className="list-disc list-inside space-y-2 text-gray-600">
-            <li>Gestión de usuarios y roles</li>
-            <li>Árbol organizacional (unidades y sectores)</li>
-            <li>Logs de auditoría</li>
-          </ul>
-        </Card>
+        {activeTab === 'usuarios' && <UsersTab />}
+        {activeTab === 'unidades' && <UnitsTab />}
+        {activeTab === 'auditoria' && <AuditTab />}
       </div>
     </ProtectedLayout>
   );

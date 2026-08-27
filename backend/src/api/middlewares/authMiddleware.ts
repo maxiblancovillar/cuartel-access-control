@@ -11,6 +11,7 @@ declare global {
       user?: {
         usuarioId: string;
         rol: string;
+        username: string;
       };
     }
   }
@@ -27,7 +28,7 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
 
   try {
     const decoded = tokenService.verifyAccessToken(token);
-    req.user = { usuarioId: decoded.usuarioId, rol: decoded.rol };
+    req.user = { usuarioId: decoded.usuarioId, rol: decoded.rol, username: decoded.username };
     next();
   } catch (_error) {
     throw new UnauthorizedException('Token inválido o expirado');

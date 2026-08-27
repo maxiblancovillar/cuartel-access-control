@@ -242,3 +242,22 @@ model DetalleVisita {
 
   @@map("detalles_visitas")
 }
+
+// ============================================
+// AUDITORÍA
+// ============================================
+
+model AuditLog {
+  id               String   @id @default(uuid()) @db.Uuid
+  usuarioId        String?  @map("usuario_id") @db.Uuid
+  usuarioUsername  String   @map("usuario_username") @db.VarChar(50)
+  accion           String   @db.VarChar(50)
+  recurso          String   @db.VarChar(100)
+  exitoso          Boolean  @default(true)
+  detalle          String?  @db.Text
+  timestamp        DateTime @default(now())
+
+  @@index([timestamp])
+  @@index([usuarioId])
+  @@map("audit_logs")
+}

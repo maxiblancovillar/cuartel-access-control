@@ -8,18 +8,19 @@ describe('TokenService', () => {
 
   describe('generateAccessToken', () => {
     it('debería generar un JWT válido con 3 partes', () => {
-      const token = tokenService.generateAccessToken('user-123', 'OPERADOR');
+      const token = tokenService.generateAccessToken('user-123', 'OPERADOR', 'juan');
 
       expect(typeof token).toBe('string');
       expect(token.split('.').length).toBe(3);
     });
 
-    it('debería incluir usuarioId y rol en el payload', () => {
-      const token = tokenService.generateAccessToken('user-456', 'SUPERVISOR');
+    it('debería incluir usuarioId, rol y username en el payload', () => {
+      const token = tokenService.generateAccessToken('user-456', 'SUPERVISOR', 'maria');
       const decoded = tokenService.verifyAccessToken(token);
 
       expect(decoded.usuarioId).toBe('user-456');
       expect(decoded.rol).toBe('SUPERVISOR');
+      expect(decoded.username).toBe('maria');
     });
   });
 
@@ -34,7 +35,7 @@ describe('TokenService', () => {
 
   describe('verifyAccessToken', () => {
     it('debería validar un token correcto', () => {
-      const token = tokenService.generateAccessToken('user-999', 'ADMIN');
+      const token = tokenService.generateAccessToken('user-999', 'ADMIN', 'admin');
       const decoded = tokenService.verifyAccessToken(token);
 
       expect(decoded.usuarioId).toBe('user-999');

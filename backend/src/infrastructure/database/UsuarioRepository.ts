@@ -16,8 +16,23 @@ export class UsuarioRepository implements IUsuarioRepository {
     });
   }
 
+  async findAll() {
+    return await prisma.usuario.findMany({
+      include: { rol: true },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async create(data: any) {
     return await prisma.usuario.create({
+      data,
+      include: { rol: true },
+    });
+  }
+
+  async update(id: string, data: any) {
+    return await prisma.usuario.update({
+      where: { id },
       data,
       include: { rol: true },
     });

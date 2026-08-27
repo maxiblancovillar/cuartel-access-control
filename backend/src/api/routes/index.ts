@@ -6,6 +6,8 @@ import { AuthController } from '../controllers/AuthController';
 import { AccessController } from '../controllers/AccessController';
 import { DashboardController } from '../controllers/DashboardController';
 import { UnitsController } from '../controllers/UnitsController';
+import { ReportsController } from '../controllers/ReportsController';
+import { AdminController } from '../controllers/AdminController';
 
 const router = Router();
 
@@ -14,6 +16,8 @@ const authController = new AuthController();
 const accessController = new AccessController();
 const dashboardController = new DashboardController();
 const unitsController = new UnitsController();
+const reportsController = new ReportsController();
+const adminController = new AdminController();
 
 // ==================== AUTH ====================
 router.post('/auth/login', (req, res, next) => authController.login(req, res).catch(next));
@@ -61,6 +65,43 @@ router.get(
   authMiddleware,
   roleGuard('SUPERVISOR', 'ADMIN'),
   (req, res, next) => dashboardController.situacionActual(req, res).catch(next)
+);
+
+// ==================== REPORTS ====================
+router.get(
+  '/reports/registros',
+  authMiddleware,
+  roleGuard('SUPERVISOR', 'ADMIN'),
+  (req, res, next) => reportsController.getRegistros(req, res).catch(next)
+);
+
+router.get('/reports/stats', authMiddleware, roleGuard('SUPERVISOR', 'ADMIN'), (req, res, next) =>
+  reportsController.getStats(req, res).catch(next)
+);
+
+// ==================== ADMIN ====================
+router.get('/admin/usuarios', authMiddleware, roleGuard('ADMIN'), (req, res, next) =>
+  adminController.getUsuarios(req, res).catch(next)
+);
+
+router.post('/admin/usuarios', authMiddleware, roleGuard('ADMIN'), (req, res, next) =>
+  adminController.createUsuario(req, res).catch(next)
+);
+
+router.put('/admin/usuarios/:id', authMiddleware, roleGuard('ADMIN'), (req, res, next) =>
+  adminController.updateUsuario(req, res).catch(next)
+);
+
+router.delete('/admin/usuarios/:id', authMiddleware, roleGuard('ADMIN'), (req, res, next) =>
+  adminController.deactivateUsuario(req, res).catch(next)
+);
+
+router.get('/admin/unidades', authMiddleware, roleGuard('ADMIN'), (req, res, next) =>
+  adminController.getUnidades(req, res).catch(next)
+);
+
+router.get('/admin/audit-logs', authMiddleware, roleGuard('ADMIN'), (req, res, next) =>
+  adminController.getAuditLogs(req, res).catch(next)
 );
 
 export default router;

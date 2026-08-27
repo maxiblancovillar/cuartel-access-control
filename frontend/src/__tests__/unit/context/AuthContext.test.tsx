@@ -40,6 +40,16 @@ describe('AuthContext', () => {
     expect(result.current.accessToken).toBeNull();
   });
 
+  it('isInitializing debería pasar a false una vez rehidratada (o no) la sesión', async () => {
+    const { result } = renderWithProviders();
+
+    // Justo después del render, el useEffect de rehidratación todavía no corrió.
+    // ProtectedRoute usa este flag para no redirigir a /login prematuramente.
+    await waitFor(() => {
+      expect(result.current.isInitializing).toBe(false);
+    });
+  });
+
   it('debería cargar usuario y token desde localStorage si existen', async () => {
     const mockUsuario = {
       id: '1',

@@ -8,7 +8,14 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRoles }) => {
-  const { usuario, accessToken } = useAuth();
+  const { usuario, accessToken, isInitializing } = useAuth();
+
+  // Esperar a que AuthContext termine de rehidratar la sesión desde
+  // localStorage antes de decidir si redirigir a /login. Sin esto, recargar
+  // la página en una ruta protegida expulsaba a un usuario con sesión válida.
+  if (isInitializing) {
+    return null;
+  }
 
   if (!accessToken || !usuario) {
     return <Navigate to="/login" replace />;

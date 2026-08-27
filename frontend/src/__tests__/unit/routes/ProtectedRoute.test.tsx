@@ -29,8 +29,16 @@ function renderWithRoute(initialPath: string, requiredRoles?: string[] | undefin
 }
 
 describe('ProtectedRoute', () => {
+  it('no debería redirigir mientras isInitializing es true, aunque no haya token todavía', () => {
+    useAuthMock.mockReturnValue({ usuario: null, accessToken: null, isInitializing: true });
+    renderWithRoute('/protegida');
+
+    expect(screen.queryByText('Pagina de Login')).not.toBeInTheDocument();
+    expect(screen.queryByText('Contenido Protegido')).not.toBeInTheDocument();
+  });
+
   it('debería redirigir a /login si no hay accessToken', () => {
-    useAuthMock.mockReturnValue({ usuario: null, accessToken: null });
+    useAuthMock.mockReturnValue({ usuario: null, accessToken: null, isInitializing: false });
     renderWithRoute('/protegida');
 
     expect(screen.getByText('Pagina de Login')).toBeInTheDocument();

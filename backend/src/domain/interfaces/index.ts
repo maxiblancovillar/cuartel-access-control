@@ -24,7 +24,14 @@ export interface IVehicleRepository {
 export interface IUsuarioRepository {
   findByUsername(username: string): Promise<any>;
   findById(id: string): Promise<any>;
+  findAll(): Promise<any[]>;
   create(data: any): Promise<any>;
+  update(id: string, data: any): Promise<any>;
+}
+
+export interface IAuditLogRepository {
+  create(data: any): Promise<any>;
+  findRecent(limit: number): Promise<any[]>;
 }
 
 export interface IUnidadRepository {
@@ -34,7 +41,7 @@ export interface IUnidadRepository {
 }
 
 export interface ITokenService {
-  generateAccessToken(usuarioId: string, rol: string): string;
+  generateAccessToken(usuarioId: string, rol: string, username: string): string;
   generateRefreshToken(usuarioId: string): string;
   verifyAccessToken(token: string): any;
   verifyRefreshToken(token: string): any;
