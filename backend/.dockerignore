@@ -1,0 +1,14 @@
+node_modules
+npm-debug.log
+dist
+.git
+.gitignore
+.env
+.env.example
+README.md
+docker-compose.yml
+Dockerfile
+.eslintrc.json
+*.md
+backend-audit*.json
+tests

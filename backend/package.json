@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/main.ts",
-    "build": "tsc",
+    "build": "tsc && tsc-alias --resolve-full-paths",
     "start": "node dist/main.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
@@ -27,7 +27,9 @@
     "jsonwebtoken": "^9.0.2",
     "pino": "^8.17.2",
     "pino-http": "^8.6.1",
+    "prisma": "^5.13.0",
     "puppeteer": "^25.9.0",
+    "tsx": "^4.7.0",
     "uuid": "^14.0.2",
     "zod": "^3.22.4"
   },
@@ -42,8 +44,7 @@
     "@typescript-eslint/parser": "^8.68.0",
     "eslint": "^8.56.0",
     "prettier": "^3.1.1",
-    "prisma": "^5.13.0",
-    "tsx": "^4.7.0",
+    "tsc-alias": "^1.9.2",
     "typescript": "^5.3.3",
     "vitest": "^4.1.11"
   }

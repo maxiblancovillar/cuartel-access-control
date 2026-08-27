@@ -8,6 +8,9 @@ services:
       POSTGRES_PASSWORD: MiPassword123
       POSTGRES_DB: cuartel_db
     ports:
+      # 5433 en el host para evitar conflicto con una instancia local de
+      # PostgreSQL en 5432 (ver BACKEND_VULNERABILITIES.md / historial del proyecto).
+      # Dentro de la red de docker-compose, otros servicios usan siempre 5432.
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -16,6 +19,54 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - sca-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cuartel_backend
+    environment:
+      - DATABASE_URL=postgresql://cuartel_user:MiPassword123@postgres:5432/cuartel_db
+      - JWT_SECRET=super-secret-key-min-32-characters-must-be
+      - JWT_EXPIRES_IN=1h
+      - REFRESH_TOKEN_EXPIRES_IN=7d
+      - PORT=3000
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - sca-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cuartel_frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - sca-network
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+
+networks:
+  sca-network:
+    driver: bridge
