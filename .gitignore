@@ -9,3 +9,6 @@ build/
 .vite/
 .idea/
 .vscode/
+coverage/
+playwright-report/
+test-results/

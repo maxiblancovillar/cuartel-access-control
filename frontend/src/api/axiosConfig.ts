@@ -29,8 +29,12 @@ axiosInstance.interceptors.request.use((config) => {
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Token expirado - limpiar y redirigir a login
+    const isLoginRequest = error.config?.url?.includes('/auth/login');
+
+    // Un 401 en /auth/login son credenciales inválidas, no una sesión expirada:
+    // se deja que LoginPage muestre el mensaje de error en el propio formulario
+    // en vez de forzar una redirección/reload que lo pisaría.
+    if (error.response?.status === 401 && !isLoginRequest) {
       setAccessToken(null);
       window.location.href = '/login';
     }
