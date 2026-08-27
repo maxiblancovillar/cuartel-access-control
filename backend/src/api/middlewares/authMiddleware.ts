@@ -5,6 +5,7 @@ import { UnauthorizedException } from '@/domain/errors/UnauthorizedException';
 const tokenService = new TokenService();
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace -- required by Express type augmentation pattern
   namespace Express {
     interface Request {
       user?: {
@@ -28,7 +29,7 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
     const decoded = tokenService.verifyAccessToken(token);
     req.user = { usuarioId: decoded.usuarioId, rol: decoded.rol };
     next();
-  } catch (error) {
+  } catch (_error) {
     throw new UnauthorizedException('Token inválido o expirado');
   }
 }

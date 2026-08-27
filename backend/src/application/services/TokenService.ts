@@ -22,7 +22,7 @@ export class TokenService implements ITokenService {
   verifyAccessToken(token: string): any {
     try {
       return jwt.verify(token, this.jwtSecret);
-    } catch (error) {
+    } catch (_error) {
       throw new UnauthorizedException('Token inválido o expirado');
     }
   }
@@ -30,7 +30,7 @@ export class TokenService implements ITokenService {
   verifyRefreshToken(token: string): any {
     try {
       return jwt.verify(token, this.jwtSecret);
-    } catch (error) {
+    } catch (_error) {
       throw new UnauthorizedException('Refresh token inválido o expirado');
     }
   }

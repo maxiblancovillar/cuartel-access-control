@@ -6,7 +6,7 @@ export function errorHandler(
   err: Error | DomainException,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) {
   if (err instanceof DomainException) {
     return res.status(err.statusCode).json({
