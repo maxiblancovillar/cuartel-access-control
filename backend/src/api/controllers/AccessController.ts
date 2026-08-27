@@ -50,7 +50,13 @@ export class AccessController {
       data.dominio || null,
       data.detalleVisita,
       req.user!.usuarioId,
-      data.observaciones
+      data.observaciones,
+      {
+        tipoVehiculo: data.tipoVehiculo,
+        marca: data.marca,
+        modelo: data.modelo,
+        color: data.color,
+      }
     );
 
     res.status(201).json(ingreso);

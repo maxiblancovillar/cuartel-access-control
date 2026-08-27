@@ -5,6 +5,18 @@ import { IPersonaRepository, IIngresoRepository } from '@/domain/interfaces';
 import { Dominio } from '@/domain/value-objects/Dominio';
 import prisma from '@/infrastructure/database/prisma';
 
+/**
+ * Formatea la hora actual como "HH:MM" (24hs) para respetar el límite
+ * de VARCHAR(10) en las columnas hora_ingreso/hora_egreso.
+ * No se usa toLocaleTimeString('es-AR', {...}) porque en algunos entornos
+ * (ICU/Node) produce strings como "03:31 p. m." que exceden el límite de columna.
+ */
+function formatHora(fecha: Date = new Date()): string {
+  const horas = String(fecha.getHours()).padStart(2, '0');
+  const minutos = String(fecha.getMinutes()).padStart(2, '0');
+  return `${horas}:${minutos}`;
+}
+
 export class AccessControlService {
   constructor(
     private personaRepo: IPersonaRepository,
@@ -47,10 +59,7 @@ export class AccessControlService {
       operadorIngresoId,
       observaciones,
       estado: 'ABIERTO',
-      horaIngreso: new Date().toLocaleTimeString('es-AR', {
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
+      horaIngreso: formatHora(),
       // fichaNro es NULL para personal propio
     });
 
@@ -67,7 +76,13 @@ export class AccessControlService {
     dominio: string | null,
     detalleVisita: any,
     operadorIngresoId: string,
-    observaciones?: string
+    observaciones?: string,
+    vehiculoDatos?: {
+      tipoVehiculo?: string;
+      marca?: string;
+      modelo?: string;
+      color?: string;
+    }
   ): Promise<any> {
     // RN-03: Verificar unicidad
     const ingresoActivo = await this.ingresoRepo.findActiveByDni(dni);
@@ -100,12 +115,18 @@ export class AccessControlService {
       if (vehiculoExistente) {
         vehiculoId = vehiculoExistente.id;
       } else {
-        // Crear nuevo vehículo (campos requeridos en request)
+        // Crear nuevo vehículo. marca/color son NOT NULL en el schema;
+        // si no se proveen datos completos, usamos placeholders "No especificado"
+        // en vez de fallar el check-in por falta de un dato secundario.
         const nuevoVehiculo = await prisma.vehiculo.create({
           data: {
             dominio: dominioVO.getValue(),
             titularPersonaId: persona.id,
-          } as any,
+            tipo: (vehiculoDatos?.tipoVehiculo as any) || 'OTRO',
+            marca: vehiculoDatos?.marca || 'No especificado',
+            modelo: vehiculoDatos?.modelo,
+            color: vehiculoDatos?.color || 'No especificado',
+          },
         });
         vehiculoId = nuevoVehiculo.id;
       }
@@ -124,10 +145,7 @@ export class AccessControlService {
       operadorIngresoId,
       observaciones,
       estado: 'ABIERTO',
-      horaIngreso: new Date().toLocaleTimeString('es-AR', {
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
+      horaIngreso: formatHora(),
     });
 
     // Crear detalle de visita
@@ -160,10 +178,7 @@ export class AccessControlService {
       estado: 'CERRADO',
       fechaEgreso: new Date(),
       operadorEgresoId,
-      horaEgreso: new Date().toLocaleTimeString('es-AR', {
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
+      horaEgreso: formatHora(),
     });
   }
 
