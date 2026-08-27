@@ -5,6 +5,7 @@ import { roleGuard } from '../middlewares/roleGuard';
 import { AuthController } from '../controllers/AuthController';
 import { AccessController } from '../controllers/AccessController';
 import { DashboardController } from '../controllers/DashboardController';
+import { UnitsController } from '../controllers/UnitsController';
 
 const router = Router();
 
@@ -12,6 +13,7 @@ const router = Router();
 const authController = new AuthController();
 const accessController = new AccessController();
 const dashboardController = new DashboardController();
+const unitsController = new UnitsController();
 
 // ==================== AUTH ====================
 router.post('/auth/login', (req, res, next) => authController.login(req, res).catch(next));
@@ -43,6 +45,14 @@ router.patch(
   authMiddleware,
   roleGuard('OPERADOR'),
   (req, res, next) => accessController.checkOut(req, res).catch(next)
+);
+
+// ==================== UNITS ====================
+router.get(
+  '/units/tree',
+  authMiddleware,
+  roleGuard('OPERADOR', 'SUPERVISOR', 'ADMIN'),
+  (req, res, next) => unitsController.tree(req, res).catch(next)
 );
 
 // ==================== DASHBOARD ====================
