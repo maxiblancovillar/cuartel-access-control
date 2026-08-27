@@ -7,6 +7,8 @@ import { ProtectedRoute } from './routes/ProtectedRoute';
 import { LoginPage } from './features/auth/pages/LoginPage';
 import { AccessControlPage } from './features/access/pages/AccessControlPage';
 import { DashboardPage } from './features/dashboard/pages/DashboardPage';
+import { ReportsPage } from './features/reports/pages/ReportsPage';
+import { AdminPage } from './features/admin/pages/AdminPage';
 
 const App: React.FC = () => {
   return (
@@ -38,6 +40,24 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute requiredRoles={['SUPERVISOR', 'ADMIN']}>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute requiredRoles={['SUPERVISOR', 'ADMIN']}>
+                <ReportsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute requiredRoles={['ADMIN']}>
+                <AdminPage />
               </ProtectedRoute>
             }
           />
