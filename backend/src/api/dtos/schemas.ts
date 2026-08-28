@@ -53,9 +53,27 @@ export const UpdateUsuarioSchema = z.object({
   password: z.string().min(8).optional(),
 });
 
+export const CreateUnidadSchema = z.object({
+  codigo: z.string().min(2).max(30),
+  nombre: z.string().min(2).max(120),
+  tipoNivel: z.enum(['COMANDO_DIRECCION', 'UNIDAD_ORGANISMO', 'SEDE_EXTERNA']),
+  esUnidadPropia: z.boolean().optional(),
+  unidadPadreId: z.number().int().positive().optional().nullable(),
+});
+
+export const UpdateUnidadSchema = z.object({
+  nombre: z.string().min(2).max(120).optional(),
+  tipoNivel: z.enum(['COMANDO_DIRECCION', 'UNIDAD_ORGANISMO', 'SEDE_EXTERNA']).optional(),
+  esUnidadPropia: z.boolean().optional(),
+  activo: z.boolean().optional(),
+  unidadPadreId: z.number().int().positive().optional().nullable(),
+});
+
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type CheckInPresenteInput = z.infer<typeof CheckInPresenteSchema>;
 export type CheckInVisitaInput = z.infer<typeof CheckInVisitaSchema>;
 export type CheckOutInput = z.infer<typeof CheckOutSchema>;
 export type CreateUsuarioInput = z.infer<typeof CreateUsuarioSchema>;
 export type UpdateUsuarioInput = z.infer<typeof UpdateUsuarioSchema>;
+export type CreateUnidadInput = z.infer<typeof CreateUnidadSchema>;
+export type UpdateUnidadInput = z.infer<typeof UpdateUnidadSchema>;

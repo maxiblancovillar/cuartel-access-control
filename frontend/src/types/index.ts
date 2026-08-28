@@ -97,6 +97,8 @@ export interface Unidad {
   nombre: string;
   tipoNivel: string;
   esUnidadPropia: boolean;
+  activo?: boolean;
+  unidadPadreId?: number | null;
   subunidades?: Unidad[];
   sectores?: {
     id: number;

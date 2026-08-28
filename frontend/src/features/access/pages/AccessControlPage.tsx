@@ -46,8 +46,8 @@ export const AccessControlPage: React.FC = () => {
               </button>
             </div>
 
-            {tab === 'presente' && <FormPresente dni={dni} />}
-            {tab === 'visita' && <FormVisita dni={dni} />}
+            {tab === 'presente' && <FormPresente dni={dni} onSuccess={() => setDni('')} />}
+            {tab === 'visita' && <FormVisita dni={dni} onSuccess={() => setDni('')} />}
           </>
         )}
       </div>

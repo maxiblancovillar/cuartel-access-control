@@ -19,6 +19,22 @@ interface ActualizarUsuarioInput {
   password?: string;
 }
 
+interface CrearUnidadInput {
+  codigo: string;
+  nombre: string;
+  tipoNivel: 'COMANDO_DIRECCION' | 'UNIDAD_ORGANISMO' | 'SEDE_EXTERNA';
+  esUnidadPropia?: boolean;
+  unidadPadreId?: number | null;
+}
+
+interface ActualizarUnidadInput {
+  nombre?: string;
+  tipoNivel?: 'COMANDO_DIRECCION' | 'UNIDAD_ORGANISMO' | 'SEDE_EXTERNA';
+  esUnidadPropia?: boolean;
+  activo?: boolean;
+  unidadPadreId?: number | null;
+}
+
 /** Formatea el usuario de Prisma (con relación `rol`) a la forma que consume el frontend. */
 function formatearUsuario(usuario: any) {
   return {
@@ -153,6 +169,86 @@ export class AdminService {
       include: { sectores: true },
       orderBy: { nombre: 'asc' },
     });
+  }
+
+  async createUnidad(input: CrearUnidadInput, actor: { id: string; username: string }) {
+    const existente = await prisma.unidad.findUnique({ where: { codigo: input.codigo } });
+    if (existente) {
+      throw new ValidationException({ codigo: ['Ya existe una unidad con ese código'] });
+    }
+
+    if (input.unidadPadreId !== undefined && input.unidadPadreId !== null) {
+      const padre = await prisma.unidad.findUnique({ where: { id: input.unidadPadreId } });
+      if (!padre) {
+        throw new ValidationException({ unidadPadreId: ['La unidad padre indicada no existe'] });
+      }
+    }
+
+    const unidad = await prisma.unidad.create({
+      data: {
+        codigo: input.codigo,
+        nombre: input.nombre,
+        tipoNivel: input.tipoNivel,
+        esUnidadPropia: input.esUnidadPropia ?? false,
+        unidadPadreId: input.unidadPadreId ?? null,
+      },
+      include: { sectores: true },
+    });
+
+    await this.auditService.registrar({
+      usuarioId: actor.id,
+      usuarioUsername: actor.username,
+      accion: 'CREATE_UNIDAD',
+      recurso: `unidades/${unidad.id}`,
+      exitoso: true,
+      detalle: `Creó la unidad ${unidad.nombre} (${unidad.codigo})`,
+    });
+
+    return unidad;
+  }
+
+  async updateUnidad(
+    id: number,
+    input: ActualizarUnidadInput,
+    actor: { id: string; username: string }
+  ) {
+    const existente = await prisma.unidad.findUnique({ where: { id } });
+    if (!existente) {
+      throw new NotFoundException('unidad', String(id));
+    }
+
+    if (input.unidadPadreId !== undefined && input.unidadPadreId !== null) {
+      if (input.unidadPadreId === id) {
+        throw new ValidationException({ unidadPadreId: ['Una unidad no puede ser su propia unidad padre'] });
+      }
+      const padre = await prisma.unidad.findUnique({ where: { id: input.unidadPadreId } });
+      if (!padre) {
+        throw new ValidationException({ unidadPadreId: ['La unidad padre indicada no existe'] });
+      }
+    }
+
+    const unidad = await prisma.unidad.update({
+      where: { id },
+      data: {
+        nombre: input.nombre,
+        tipoNivel: input.tipoNivel,
+        esUnidadPropia: input.esUnidadPropia,
+        activo: input.activo,
+        unidadPadreId: input.unidadPadreId,
+      },
+      include: { sectores: true },
+    });
+
+    await this.auditService.registrar({
+      usuarioId: actor.id,
+      usuarioUsername: actor.username,
+      accion: 'UPDATE_UNIDAD',
+      recurso: `unidades/${id}`,
+      exitoso: true,
+      detalle: `Actualizó la unidad ${unidad.nombre} (${unidad.codigo})`,
+    });
+
+    return unidad;
   }
 
   async getAuditLogs(limit: number = 50) {

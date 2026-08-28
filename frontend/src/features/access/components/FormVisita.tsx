@@ -25,9 +25,12 @@ type VisitaFormData = z.infer<typeof visitaSchema>;
 
 interface FormVisitaProps {
   dni: string;
+  /** Se invoca tras registrar la visita correctamente, para volver a la
+   * pantalla de escaneo (limpiar el DNI actual) y permitir el siguiente ingreso. */
+  onSuccess?: () => void;
 }
 
-export const FormVisita: React.FC<FormVisitaProps> = ({ dni }) => {
+export const FormVisita: React.FC<FormVisitaProps> = ({ dni, onSuccess }) => {
   useLookupDni(dni);
   const { data: unidades } = useUnitsTree();
   const checkInVisita = useCheckInVisita();
@@ -57,6 +60,7 @@ export const FormVisita: React.FC<FormVisitaProps> = ({ dni }) => {
         },
       });
       alert('✅ Ficha de visita registrada correctamente');
+      onSuccess?.();
     } catch (error: any) {
       setError('root', {
         message: error.response?.data?.message || 'Error al registrar visita',

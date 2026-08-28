@@ -78,6 +78,42 @@ export const useUnidadesAdmin = () => {
   });
 };
 
+export const useCreateUnidad = () => {
+  return useMutation(
+    async (payload: {
+      codigo: string;
+      nombre: string;
+      tipoNivel: 'COMANDO_DIRECCION' | 'UNIDAD_ORGANISMO' | 'SEDE_EXTERNA';
+      esUnidadPropia?: boolean;
+      unidadPadreId?: number | null;
+    }) => {
+      const { data } = await axiosInstance.post<Unidad>('/admin/unidades', payload);
+      return data;
+    }
+  );
+};
+
+export const useUpdateUnidad = () => {
+  return useMutation(
+    async (payload: {
+      id: number;
+      data: {
+        nombre?: string;
+        tipoNivel?: 'COMANDO_DIRECCION' | 'UNIDAD_ORGANISMO' | 'SEDE_EXTERNA';
+        esUnidadPropia?: boolean;
+        activo?: boolean;
+        unidadPadreId?: number | null;
+      };
+    }) => {
+      const { data } = await axiosInstance.put<Unidad>(
+        `/admin/unidades/${payload.id}`,
+        payload.data
+      );
+      return data;
+    }
+  );
+};
+
 // Logs
 export const useAuditLogs = () => {
   return useQuery(['admin', 'logs'], async () => {

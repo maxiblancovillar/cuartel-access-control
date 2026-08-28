@@ -47,6 +47,20 @@ export const UsersTab: React.FC = () => {
     setFormData(FORM_INICIAL);
   };
 
+  // Extrae el mensaje de error más específico posible: los errores de
+  // validación (ValidationException/ZodError, ambos serializados por el
+  // backend como { message, details: { campo: [mensajes] } }) solo
+  // mostraban el mensaje genérico "Errores de validación en los datos
+  // enviados" sin decir qué campo falló (p. ej. "usuario ya en uso").
+  const extraerMensajeError = (error: any, fallback: string): string => {
+    const details = error.response?.data?.details;
+    if (details && typeof details === 'object') {
+      const mensajes = Object.values(details).flat().filter(Boolean);
+      if (mensajes.length > 0) return mensajes.join(', ');
+    }
+    return error.response?.data?.message || fallback;
+  };
+
   const handleSubmit = async () => {
     try {
       if (editingId) {
@@ -60,7 +74,7 @@ export const UsersTab: React.FC = () => {
       resetForm();
       refetch();
     } catch (error: any) {
-      alert('Error: ' + (error.response?.data?.message || 'No se pudo guardar el usuario'));
+      alert('Error: ' + extraerMensajeError(error, 'No se pudo guardar el usuario'));
     }
   };
 
@@ -70,7 +84,18 @@ export const UsersTab: React.FC = () => {
         await deactivateUsuario.mutateAsync(id);
         refetch();
       } catch (error: any) {
-        alert('Error: ' + (error.response?.data?.message || 'No se pudo desactivar el usuario'));
+        alert('Error: ' + extraerMensajeError(error, 'No se pudo desactivar el usuario'));
+      }
+    }
+  };
+
+  const handleReactivate = async (id: string, username: string) => {
+    if (confirm(`¿Confirmar reactivar al usuario "${username}"? Podrá volver a iniciar sesión.`)) {
+      try {
+        await updateUsuario.mutateAsync({ id, data: { activo: true } });
+        refetch();
+      } catch (error: any) {
+        alert('Error: ' + extraerMensajeError(error, 'No se pudo reactivar el usuario'));
       }
     }
   };
@@ -169,9 +194,13 @@ export const UsersTab: React.FC = () => {
                     >
                       ✏️ Editar
                     </Button>
-                    {u.activo && (
+                    {u.activo ? (
                       <Button size="sm" variant="danger" onClick={() => handleDeactivate(u.id, u.username)}>
                         🚫 Desactivar
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="primary" onClick={() => handleReactivate(u.id, u.username)}>
+                        ✅ Reactivar
                       </Button>
                     )}
                   </td>

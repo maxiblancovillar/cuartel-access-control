@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { DomainException } from '@/domain/errors/DomainException';
+import { ValidationException } from '@/domain/errors/ValidationException';
 
 export function errorHandler(
   err: Error | DomainException,
@@ -8,6 +9,19 @@ export function errorHandler(
   res: Response,
   _next: NextFunction
 ) {
+  // ValidationException se chequea antes de la rama genérica de DomainException
+  // porque además de code/message trae los fieldErrors por campo (igual que el
+  // caso de ZodError más abajo). Sin esto el cliente solo recibía el mensaje
+  // genérico "Errores de validación en los datos enviados" sin saber qué campo
+  // falló (p. ej. "username ya está en uso" al crear un usuario duplicado).
+  if (err instanceof ValidationException) {
+    return res.status(err.statusCode).json({
+      error: err.code,
+      message: err.message,
+      details: err.fieldErrors,
+    });
+  }
+
   if (err instanceof DomainException) {
     return res.status(err.statusCode).json({
       error: err.code,

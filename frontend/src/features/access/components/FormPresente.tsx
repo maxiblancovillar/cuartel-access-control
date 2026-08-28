@@ -20,9 +20,12 @@ type PresenteFormData = z.infer<typeof presenteSchema>;
 
 interface FormPresenteProps {
   dni: string;
+  /** Se invoca tras registrar el presente correctamente, para volver a la
+   * pantalla de escaneo (limpiar el DNI actual) y permitir el siguiente ingreso. */
+  onSuccess?: () => void;
 }
 
-export const FormPresente: React.FC<FormPresenteProps> = ({ dni }) => {
+export const FormPresente: React.FC<FormPresenteProps> = ({ dni, onSuccess }) => {
   const { data: persona, isLoading: loadingPersona } = useLookupDni(dni);
   const { data: unidades } = useUnitsTree();
   const checkInPresente = useCheckInPresente();
@@ -45,6 +48,7 @@ export const FormPresente: React.FC<FormPresenteProps> = ({ dni }) => {
         observaciones: data.observaciones,
       });
       alert('✅ Presente registrado correctamente');
+      onSuccess?.();
     } catch (error: any) {
       setError('root', {
         message: error.response?.data?.message || 'Error al registrar presente',

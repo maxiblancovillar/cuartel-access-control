@@ -100,6 +100,14 @@ router.get('/admin/unidades', authMiddleware, roleGuard('ADMIN'), (req, res, nex
   adminController.getUnidades(req, res).catch(next)
 );
 
+router.post('/admin/unidades', authMiddleware, roleGuard('ADMIN'), (req, res, next) =>
+  adminController.createUnidad(req, res).catch(next)
+);
+
+router.put('/admin/unidades/:id', authMiddleware, roleGuard('ADMIN'), (req, res, next) =>
+  adminController.updateUnidad(req, res).catch(next)
+);
+
 router.get('/admin/audit-logs', authMiddleware, roleGuard('ADMIN'), (req, res, next) =>
   adminController.getAuditLogs(req, res).catch(next)
 );
