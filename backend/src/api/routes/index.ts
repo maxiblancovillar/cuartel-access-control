@@ -100,6 +100,10 @@ router.get('/admin/unidades', authMiddleware, roleGuard('ADMIN'), (req, res, nex
   adminController.getUnidades(req, res).catch(next)
 );
 
+router.get('/admin/unidades/tree', authMiddleware, roleGuard('ADMIN'), (req, res, next) =>
+  adminController.getUnidadesTree(req, res).catch(next)
+);
+
 router.post('/admin/unidades', authMiddleware, roleGuard('ADMIN'), (req, res, next) =>
   adminController.createUnidad(req, res).catch(next)
 );

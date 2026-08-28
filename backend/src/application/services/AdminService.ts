@@ -35,6 +35,46 @@ interface ActualizarUnidadInput {
   unidadPadreId?: number | null;
 }
 
+/**
+ * Verifica que asignar `nuevoPadreId` como padre de `unidadId` no genere un
+ * ciclo en la jerarquía (p. ej. A → B → A). Se recorre la cadena de
+ * ancestros de `nuevoPadreId` usando `obtenerPadreId`: si en algún punto se
+ * encuentra `unidadId`, significa que `unidadId` ya es ancestro de
+ * `nuevoPadreId` y asignarlo como su padre cerraría el ciclo.
+ *
+ * Se recibe `obtenerPadreId` como dependencia (en vez de golpear Prisma
+ * directamente) para poder testear la lógica de recorrido con datos en
+ * memoria, sin mockear la base de datos.
+ */
+export async function validateNoCircles(
+  unidadId: number,
+  nuevoPadreId: number,
+  obtenerPadreId: (id: number) => Promise<number | null>
+): Promise<boolean> {
+  if (unidadId === nuevoPadreId) {
+    return false;
+  }
+
+  const visitados = new Set<number>();
+  let actual: number | null = nuevoPadreId;
+
+  while (actual !== null) {
+    if (actual === unidadId) {
+      return false;
+    }
+    if (visitados.has(actual)) {
+      // Ciclo preexistente ajeno a esta operación (no debería ocurrir si
+      // todas las asignaciones pasaron por esta validación, pero cortamos
+      // el recorrido defensivamente para no entrar en loop infinito).
+      return false;
+    }
+    visitados.add(actual);
+    actual = await obtenerPadreId(actual);
+  }
+
+  return true;
+}
+
 /** Formatea el usuario de Prisma (con relación `rol`) a la forma que consume el frontend. */
 function formatearUsuario(usuario: any) {
   return {
@@ -171,6 +211,40 @@ export class AdminService {
     });
   }
 
+  /**
+   * Devuelve la jerarquía completa de unidades como árbol anidado
+   * (subunidades dentro de subunidades, sin límite de profundidad), a
+   * diferencia de getUnidades() que devuelve la lista plana.
+   *
+   * Se trae toda la tabla en una sola query y se arma el árbol en memoria
+   * (evita 1 query por nivel de profundidad); el volumen de unidades de un
+   * cuartel es lo bastante chico para que esto no sea un problema de
+   * rendimiento.
+   */
+  async getUnidadesTree() {
+    const todas = await prisma.unidad.findMany({
+      include: { sectores: true },
+      orderBy: { nombre: 'asc' },
+    });
+
+    const porId = new Map<number, (typeof todas)[number] & { subunidades: unknown[] }>();
+    for (const unidad of todas) {
+      porId.set(unidad.id, { ...unidad, subunidades: [] });
+    }
+
+    const raices: Array<(typeof todas)[number] & { subunidades: unknown[] }> = [];
+    for (const unidad of todas) {
+      const nodo = porId.get(unidad.id)!;
+      if (unidad.unidadPadreId !== null && porId.has(unidad.unidadPadreId)) {
+        (porId.get(unidad.unidadPadreId)!.subunidades as unknown[]).push(nodo);
+      } else {
+        raices.push(nodo);
+      }
+    }
+
+    return raices;
+  }
+
   async createUnidad(input: CrearUnidadInput, actor: { id: string; username: string }) {
     const existente = await prisma.unidad.findUnique({ where: { codigo: input.codigo } });
     if (existente) {
@@ -218,12 +292,20 @@ export class AdminService {
     }
 
     if (input.unidadPadreId !== undefined && input.unidadPadreId !== null) {
-      if (input.unidadPadreId === id) {
-        throw new ValidationException({ unidadPadreId: ['Una unidad no puede ser su propia unidad padre'] });
-      }
       const padre = await prisma.unidad.findUnique({ where: { id: input.unidadPadreId } });
       if (!padre) {
         throw new ValidationException({ unidadPadreId: ['La unidad padre indicada no existe'] });
+      }
+
+      const esValido = await validateNoCircles(id, input.unidadPadreId, async (unidadIdActual) => {
+        const u = await prisma.unidad.findUnique({ where: { id: unidadIdActual } });
+        return u?.unidadPadreId ?? null;
+      });
+
+      if (!esValido) {
+        throw new ValidationException({
+          unidadPadreId: ['No se puede crear un ciclo: la unidad padre elegida es descendiente de esta unidad'],
+        });
       }
     }
 

@@ -1,48 +1,50 @@
 import React, { useState } from 'react';
-import { useUnidadesAdmin, useCreateUnidad, useUpdateUnidad } from '@/api/hooks/useAdmin';
+import { useUnidadesTree, useCreateUnidad, useUpdateUnidad } from '@/api/hooks/useAdmin';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { Badge } from '@/components/ui/Badge';
+import { Alert } from '@/components/ui/Alert';
+import { UnitsTree } from './UnitsTree';
+import { UnitsForm, UnitFormState } from './UnitsForm';
 import { Unidad } from '@/types';
 
-const TIPOS_NIVEL = [
-  { value: 'COMANDO_DIRECCION', label: 'Comando/Dirección' },
-  { value: 'UNIDAD_ORGANISMO', label: 'Unidad/Organismo' },
-  { value: 'SEDE_EXTERNA', label: 'Sede Externa' },
-];
-
-interface FormState {
-  codigo: string;
-  nombre: string;
-  tipoNivel: 'COMANDO_DIRECCION' | 'UNIDAD_ORGANISMO' | 'SEDE_EXTERNA';
-  esUnidadPropia: boolean;
-}
-
-const FORM_INICIAL: FormState = {
+const FORM_INICIAL: UnitFormState = {
   codigo: '',
   nombre: '',
   tipoNivel: 'UNIDAD_ORGANISMO',
   esUnidadPropia: false,
+  unidadPadreId: null,
 };
 
+/** Extrae el mensaje de error más específico: los errores de validación
+ * (ValidationException/ZodError) traen { message, details: { campo: [msgs] } }. */
+function extraerMensajeError(error: any, fallback: string): string {
+  const details = error.response?.data?.details;
+  if (details && typeof details === 'object') {
+    const mensajes = Object.values(details).flat().filter(Boolean);
+    if (mensajes.length > 0) return mensajes.join(', ');
+  }
+  return error.response?.data?.message || fallback;
+}
+
 export const UnitsTab: React.FC = () => {
-  const { data: unidades, isLoading, refetch } = useUnidadesAdmin();
+  const { data: unidadesTree, isLoading, refetch } = useUnidadesTree();
   const createUnidad = useCreateUnidad();
   const updateUnidad = useUpdateUnidad();
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [formData, setFormData] = useState<FormState>(FORM_INICIAL);
+  const [formData, setFormData] = useState<UnitFormState>(FORM_INICIAL);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const resetForm = () => {
     setShowForm(false);
     setEditingId(null);
     setFormData(FORM_INICIAL);
+    setErrorMsg(null);
   };
 
   const handleSubmit = async () => {
+    setErrorMsg(null);
     try {
       if (editingId) {
         await updateUnidad.mutateAsync({
@@ -51,6 +53,7 @@ export const UnitsTab: React.FC = () => {
             nombre: formData.nombre,
             tipoNivel: formData.tipoNivel,
             esUnidadPropia: formData.esUnidadPropia,
+            unidadPadreId: formData.unidadPadreId,
           },
         });
       } else {
@@ -59,9 +62,7 @@ export const UnitsTab: React.FC = () => {
       resetForm();
       refetch();
     } catch (error: any) {
-      const details = error.response?.data?.details;
-      const detailMsg = details ? Object.values(details).flat().join(', ') : null;
-      alert('Error: ' + (detailMsg || error.response?.data?.message || 'No se pudo guardar la unidad'));
+      setErrorMsg(extraerMensajeError(error, 'No se pudo guardar la unidad'));
     }
   };
 
@@ -72,7 +73,7 @@ export const UnitsTab: React.FC = () => {
       await updateUnidad.mutateAsync({ id: unidad.id, data: { activo: unidad.activo === false } });
       refetch();
     } catch (error: any) {
-      alert('Error: ' + (error.response?.data?.message || 'No se pudo actualizar la unidad'));
+      alert('Error: ' + extraerMensajeError(error, 'No se pudo actualizar la unidad'));
     }
   };
 
@@ -81,9 +82,18 @@ export const UnitsTab: React.FC = () => {
     setFormData({
       codigo: u.codigo,
       nombre: u.nombre,
-      tipoNivel: u.tipoNivel as FormState['tipoNivel'],
+      tipoNivel: u.tipoNivel as UnitFormState['tipoNivel'],
       esUnidadPropia: u.esUnidadPropia,
+      unidadPadreId: u.unidadPadreId ?? null,
     });
+    setErrorMsg(null);
+    setShowForm(true);
+  };
+
+  const startAddChild = (parentId: number) => {
+    setEditingId(null);
+    setFormData({ ...FORM_INICIAL, unidadPadreId: parentId });
+    setErrorMsg(null);
     setShowForm(true);
   };
 
@@ -101,84 +111,30 @@ export const UnitsTab: React.FC = () => {
       </div>
 
       {showForm && (
-        <Card title={editingId ? 'Editar Unidad' : 'Nueva Unidad'}>
-          <div className="space-y-4">
-            <Input
-              label="Código"
-              value={formData.codigo}
-              disabled={!!editingId}
-              onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
-            />
-            <Input
-              label="Nombre"
-              value={formData.nombre}
-              onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-            />
-            <Select
-              label="Tipo de Nivel"
-              options={TIPOS_NIVEL}
-              value={formData.tipoNivel}
-              onChange={(e) =>
-                setFormData({ ...formData, tipoNivel: e.target.value as FormState['tipoNivel'] })
-              }
-            />
-            <label className="flex items-center gap-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                checked={formData.esUnidadPropia}
-                onChange={(e) => setFormData({ ...formData, esUnidadPropia: e.target.checked })}
-              />
-              Es unidad propia del cuartel
-            </label>
-            <div className="flex gap-2">
-              <Button onClick={handleSubmit} variant="primary">
-                {editingId ? '💾 Actualizar' : '➕ Crear'}
-              </Button>
-              <Button onClick={resetForm} variant="secondary">
-                Cancelar
-              </Button>
-            </div>
-          </div>
-        </Card>
+        <div className="space-y-2">
+          {errorMsg && <Alert variant="danger">{errorMsg}</Alert>}
+          <UnitsForm
+            formData={formData}
+            setFormData={setFormData}
+            onSubmit={handleSubmit}
+            onCancel={resetForm}
+            editingId={editingId}
+            allUnidades={unidadesTree ?? []}
+          />
+        </div>
       )}
 
-      <Card title={`Unidades Organizacionales (${unidades?.length || 0})`}>
-        <div className="space-y-4">
-          {unidades?.map((u) => (
-            <div key={u.id} className="border rounded-lg p-4">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-bold text-lg">{u.nombre}</h3>
-                  <p className="text-sm text-gray-600">Código: {u.codigo}</p>
-                  <p className="text-sm text-gray-600">Tipo: {u.tipoNivel}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant={u.esUnidadPropia ? 'success' : 'info'}>
-                    {u.esUnidadPropia ? 'Propia' : 'Externa'}
-                  </Badge>
-                  <Badge variant={u.activo === false ? 'warning' : 'success'}>
-                    {u.activo === false ? 'Inactiva' : 'Activa'}
-                  </Badge>
-                </div>
-              </div>
-              <div className="mt-3 space-x-2">
-                <Button size="sm" onClick={() => startEdit(u)}>
-                  ✏️ Editar
-                </Button>
-                <Button
-                  size="sm"
-                  variant={u.activo === false ? 'primary' : 'danger'}
-                  onClick={() => handleToggleActivo(u)}
-                >
-                  {u.activo === false ? '✅ Reactivar' : '🚫 Desactivar'}
-                </Button>
-              </div>
-            </div>
-          ))}
-          {unidades?.length === 0 && (
-            <p className="text-center py-4 text-gray-600">No hay unidades registradas</p>
-          )}
-        </div>
+      <Card title="Estructura Organizacional">
+        {unidadesTree && unidadesTree.length > 0 ? (
+          <UnitsTree
+            unidades={unidadesTree}
+            onEdit={startEdit}
+            onToggleActivo={handleToggleActivo}
+            onAddChild={startAddChild}
+          />
+        ) : (
+          <p className="text-center py-4 text-gray-600">No hay unidades registradas</p>
+        )}
       </Card>
     </div>
   );

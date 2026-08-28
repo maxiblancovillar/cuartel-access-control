@@ -78,6 +78,14 @@ export const useUnidadesAdmin = () => {
   });
 };
 
+/** Estructura jerárquica anidada (subunidades dentro de subunidades). */
+export const useUnidadesTree = () => {
+  return useQuery(['admin', 'unidades-tree'], async () => {
+    const { data } = await axiosInstance.get<Unidad[]>('/admin/unidades/tree');
+    return data;
+  });
+};
+
 export const useCreateUnidad = () => {
   return useMutation(
     async (payload: {

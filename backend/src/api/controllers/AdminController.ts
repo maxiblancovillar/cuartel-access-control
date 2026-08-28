@@ -54,6 +54,11 @@ export class AdminController {
     res.status(200).json(unidades);
   }
 
+  async getUnidadesTree(req: Request, res: Response) {
+    const unidades = await this.adminService.getUnidadesTree();
+    res.status(200).json(unidades);
+  }
+
   async createUnidad(req: Request, res: Response) {
     const data = CreateUnidadSchema.parse(req.body);
     const unidad = await this.adminService.createUnidad(data, {
